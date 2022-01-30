@@ -1,0 +1,22 @@
+diff --git a/node_modules/@types/mssql/index.d.ts b/node_modules/@types/mssql/index.d.ts
+index 20784c9..e70cc0b 100755
+--- a/node_modules/@types/mssql/index.d.ts
++++ b/node_modules/@types/mssql/index.d.ts
+@@ -138,6 +138,7 @@ export interface IResult<T> {
+     recordset: IRecordSet<T>;
+     rowsAffected: number[],
+     output: { [key: string]: any };
++    columns: IColumnMetadata[];
+ }
+ 
+ export interface IBulkResult {
+@@ -342,6 +343,9 @@ export declare class Request extends events.EventEmitter {
+     public cancel(): void;
+     public pause(): boolean;
+     public resume(): boolean;
++
++    // patch
++    public arrayRowMode?: boolean | undefined;
+ }
+ 
+ export declare class RequestError extends MSSQLError {
