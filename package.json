@@ -23,7 +23,7 @@
     "trailingComma": "all"
   },
   "scripts": {
-    "postinstall": "patch-package",
+    "manual-postinstall": "patch-package",
     "build": "tsc",
     "format-ts": "prettier --write 'src/**/*.ts'",
     "format-js": "prettier --write 'dist/**/*.{js,ts}'",
