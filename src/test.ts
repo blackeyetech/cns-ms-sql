@@ -9,17 +9,47 @@ async function run() {
   let mssql = new CNMSSql("MS-SQL");
   await mssql.init();
 
-  // let id = await mssql.create("Persons", { firstName: "Kieran" }, "Personid");
+  let id = await mssql.create({
+    collection: "person",
+    fields: { first: "James" },
+    id: "id",
+  });
+  console.log(id);
 
-  // console.log(id);
+  let rows = await mssql.read({ collection: "person" });
+  console.log(rows);
 
-  let rows = await mssql.delete(
-    "Persons",
+  rows = await mssql.read({ collection: "person", criteria: { id } });
+  console.log(rows);
 
-    {
-      Personid: { val: 3, op: ">" },
+  rows = await mssql.read({
+    collection: "person",
+    criteria: { first: "James" },
+  });
+  console.log(rows);
+
+  await mssql.update({
+    collection: "person",
+    fields: {
+      first: "Fred",
     },
-  );
+    criteria: {
+      id,
+    },
+  });
+
+  rows = await mssql.read({ collection: "person", criteria: { id } });
+  console.log(rows);
+
+  await mssql.delete({
+    collection: "person",
+
+    criteria: {
+      id,
+    },
+  });
+
+  rows = await mssql.read({ collection: "person" });
   console.log(rows);
 }
 

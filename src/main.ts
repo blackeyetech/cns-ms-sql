@@ -22,6 +22,34 @@ export interface CNMSSqlReadOptions {
   distinct?: boolean;
 }
 
+export interface CNMSSqlCreateParams {
+  collection: string;
+  fields: { [key: string]: any };
+  id?: string;
+  transaction?: mssql.Transaction;
+}
+
+export interface CNMSSqlReadParams {
+  collection: string;
+  fields?: string[];
+  criteria?: { [key: string]: any };
+  opts?: CNMSSqlReadOptions;
+  transaction?: mssql.Transaction;
+}
+
+export interface CNMSSqlUpdateParams {
+  collection: string;
+  fields: { [key: string]: any };
+  criteria: { [key: string]: any };
+  transaction?: mssql.Transaction;
+}
+
+export interface CNMSSqlDeleteParams {
+  collection: string;
+  criteria: { [key: string]: any };
+  transaction?: mssql.Transaction;
+}
+
 // Class CNMSSql here
 export class CNMSSql extends CNShell {
   // Properties here
@@ -127,19 +155,20 @@ export class CNMSSql extends CNShell {
     }
   }
 
-  async create(
-    collection: string,
-    fields: { [key: string]: any },
-    id?: string,
-  ): Promise<any> {
+  async create(params: CNMSSqlCreateParams): Promise<any> {
     let fieldsStr = "";
     let valuesStr = "";
 
+    let request: mssql.Request;
+
+    if (params.transaction !== undefined) {
+      request = new mssql.Request(params.transaction);
+    } else {
+      request = new mssql.Request(this._pool);
+    }
+
     let position = 1;
-
-    let request = new mssql.Request(this._pool);
-
-    for (const f in fields) {
+    for (const f in params.fields) {
       if (position > 1) {
         fieldsStr += ",";
         valuesStr += ",";
@@ -148,16 +177,16 @@ export class CNMSSql extends CNShell {
       fieldsStr += f;
       valuesStr += `@${f}`;
 
-      request.input(f, fields[f]);
+      request.input(f, params.fields[f]);
       position++;
     }
 
     let query = "";
 
-    if (id !== undefined) {
-      query = `INSERT INTO ${collection} (${fieldsStr}) OUTPUT INSERTED.${id} VALUES (${valuesStr})`;
+    if (params.id !== undefined) {
+      query = `INSERT INTO ${params.collection} (${fieldsStr}) OUTPUT INSERTED.${params.id} VALUES (${valuesStr})`;
     } else {
-      query = `INSERT INTO ${collection} (${fieldsStr}) VALUES (${valuesStr})`;
+      query = `INSERT INTO ${params.collection} (${fieldsStr}) VALUES (${valuesStr})`;
     }
 
     let res = await request.query(query).catch(e => {
@@ -165,46 +194,53 @@ export class CNMSSql extends CNShell {
       throw new Error("Something wrong with your request!");
     });
 
-    if (id !== undefined) {
-      return res.recordset[0][0];
+    if (params.id !== undefined) {
+      return res.recordset[0][params.id];
     }
   }
 
-  async read(
-    collection: string,
-    fields: string[] = ["*"],
-    criteria: { [key: string]: any } = {},
-    opts: CNMSSqlReadOptions = {},
-  ) {
-    if (opts.format === undefined) opts.format = "json";
-    if (opts.distinct === undefined) opts.distinct = false;
-    if (opts.orderBy === undefined) opts.orderBy = [];
-    if (opts.groupBy === undefined) opts.groupBy = [];
-    if (opts.orderByDesc === undefined) opts.orderByDesc = [];
+  async read(params: CNMSSqlReadParams) {
+    if (params.fields === undefined) params.fields = ["*"];
+    if (params.criteria === undefined) params.criteria = {};
+    if (params.opts === undefined) params.opts = {};
+
+    if (params.opts.format === undefined) params.opts.format = "json";
+    if (params.opts.distinct === undefined) params.opts.distinct = false;
+    if (params.opts.orderBy === undefined) params.opts.orderBy = [];
+    if (params.opts.groupBy === undefined) params.opts.groupBy = [];
+    if (params.opts.orderByDesc === undefined) params.opts.orderByDesc = [];
 
     let query = "";
-    let request = new mssql.Request(this._pool);
+    let request: mssql.Request;
 
-    if (opts.format === "array") {
+    if (params.transaction !== undefined) {
+      request = new mssql.Request(params.transaction);
+    } else {
+      request = new mssql.Request(this._pool);
+    }
+
+    if (params.opts.format === "array") {
       request.arrayRowMode = true;
     }
 
-    if (opts.distinct) {
-      query = `SELECT DISTINCT ${fields.join()} FROM ${collection}`;
+    if (params.opts.distinct) {
+      query = `SELECT DISTINCT ${params.fields.join()} FROM ${
+        params.collection
+      }`;
     } else {
-      query = `SELECT ${fields.join()} FROM ${collection}`;
+      query = `SELECT ${params.fields.join()} FROM ${params.collection}`;
     }
 
-    if (Object.keys(criteria).length > 0) {
+    if (Object.keys(params.criteria).length > 0) {
       query += " WHERE ";
 
       let position = 1;
-      for (const c in criteria) {
+      for (const c in params.criteria) {
         if (position > 1) {
           query += " AND ";
         }
 
-        const val = criteria[c];
+        const val = params.criteria[c];
 
         if (typeof val === "object") {
           request.input(c, val.val);
@@ -218,18 +254,18 @@ export class CNMSSql extends CNShell {
       }
     }
 
-    if (opts.groupBy.length > 0) {
-      query += ` GROUP BY ${opts.groupBy.join()}`;
+    if (params.opts.groupBy.length > 0) {
+      query += ` GROUP BY ${params.opts.groupBy.join()}`;
     }
-    if (opts.orderBy.length > 0) {
-      query += ` ORDER BY ${opts.orderBy.join()}`;
+    if (params.opts.orderBy.length > 0) {
+      query += ` ORDER BY ${params.opts.orderBy.join()}`;
       query += " ASC";
     }
-    if (opts.orderByDesc.length > 0) {
-      if (opts.orderBy.length > 0) {
-        query += `, ${opts.orderByDesc.join()} DESC`;
+    if (params.opts.orderByDesc.length > 0) {
+      if (params.opts.orderBy.length > 0) {
+        query += `, ${params.opts.orderByDesc.join()} DESC`;
       } else {
-        query += ` ORDER BY ${opts.orderByDesc.join()} DESC`;
+        query += ` ORDER BY ${params.opts.orderByDesc.join()} DESC`;
       }
     }
 
@@ -239,7 +275,7 @@ export class CNMSSql extends CNShell {
       throw new Error("Something wrong with your request!");
     });
 
-    if (opts.format === "array") {
+    if (params.opts.format === "array") {
       this.info("%j", res.columns[0]);
       let cols: string[] = [];
       for (let col in res.columns[0]) {
@@ -251,38 +287,40 @@ export class CNMSSql extends CNShell {
     return res.recordset;
   }
 
-  async update(
-    collection: string,
-    fields: { [key: string]: any },
-    criteria: { [key: string]: any } = {},
-  ) {
+  async update(params: CNMSSqlUpdateParams) {
     let fieldStr = "";
     let position = 1;
-    let request = new mssql.Request(this._pool);
+    let request: mssql.Request;
 
-    for (const f in fields) {
+    if (params.transaction !== undefined) {
+      request = new mssql.Request(params.transaction);
+    } else {
+      request = new mssql.Request(this._pool);
+    }
+
+    for (const f in params.fields) {
       if (position > 1) {
         fieldStr += ",";
       }
 
-      request.input(f, fields[f]);
+      request.input(f, params.fields[f]);
       fieldStr += `${f}=@${f}`;
 
       position++;
     }
 
-    let query = `UPDATE ${collection} SET ${fieldStr}`;
+    let query = `UPDATE ${params.collection} SET ${fieldStr}`;
 
-    if (Object.keys(criteria).length > 0) {
+    if (Object.keys(params.criteria).length > 0) {
       query += " WHERE ";
 
       let position = 1;
-      for (const c in criteria) {
+      for (const c in params.criteria) {
         if (position > 1) {
           query += " AND ";
         }
 
-        const val = criteria[c];
+        const val = params.criteria[c];
 
         if (typeof val === "object") {
           request.input(c, val.val);
@@ -305,21 +343,27 @@ export class CNMSSql extends CNShell {
     return res.rowsAffected[0];
   }
 
-  async delete(collection: string, criteria: { [key: string]: any } = {}) {
-    let query = `DELETE FROM ${collection}`;
+  async delete(params: CNMSSqlDeleteParams) {
+    let query = `DELETE FROM ${params.collection}`;
 
-    let request = new mssql.Request(this._pool);
+    let request: mssql.Request;
 
-    if (Object.keys(criteria).length > 0) {
+    if (params.transaction !== undefined) {
+      request = new mssql.Request(params.transaction);
+    } else {
+      request = new mssql.Request(this._pool);
+    }
+
+    if (Object.keys(params.criteria).length > 0) {
       query += " WHERE ";
 
       let position = 1;
-      for (const c in criteria) {
+      for (const c in params.criteria) {
         if (position > 1) {
           query += " AND ";
         }
 
-        const val = criteria[c];
+        const val = params.criteria[c];
 
         if (typeof val === "object") {
           request.input(c, val.val);
@@ -342,8 +386,14 @@ export class CNMSSql extends CNShell {
     return res.rowsAffected[0];
   }
 
-  async query(query: string): Promise<any> {
-    let request = new mssql.Request(this._pool);
+  async query(query: string, transaction?: mssql.Transaction): Promise<any> {
+    let request: mssql.Request;
+
+    if (transaction !== undefined) {
+      request = new mssql.Request(transaction);
+    } else {
+      request = new mssql.Request(this._pool);
+    }
 
     let res = await request.query(query).catch(e => {
       // TODO: Improve error handling
@@ -354,8 +404,14 @@ export class CNMSSql extends CNShell {
     return res.recordset;
   }
 
-  async exec(query: string): Promise<number> {
-    let request = new mssql.Request(this._pool);
+  async exec(query: string, transaction?: mssql.Transaction): Promise<number> {
+    let request: mssql.Request;
+
+    if (transaction !== undefined) {
+      request = new mssql.Request(transaction);
+    } else {
+      request = new mssql.Request(this._pool);
+    }
 
     let res = await request.query(query).catch(e => {
       // TODO: Improve error handling
@@ -364,5 +420,20 @@ export class CNMSSql extends CNShell {
     });
 
     return res.rowsAffected[0];
+  }
+
+  async begin(): Promise<mssql.Transaction> {
+    let transaction = new mssql.Transaction(this._pool);
+    await transaction.begin();
+
+    return transaction;
+  }
+
+  async commit(transaction: mssql.Transaction): Promise<void> {
+    await transaction.commit();
+  }
+
+  async rollback(transaction: mssql.Transaction): Promise<void> {
+    await transaction.rollback();
   }
 }
