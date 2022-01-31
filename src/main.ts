@@ -303,8 +303,10 @@ export class CNMSSql extends CNShell {
         fieldStr += ",";
       }
 
-      request.input(f, params.fields[f]);
-      fieldStr += `${f}=@${f}`;
+      // Make sure the field param doesnt clash with a criteria param -
+      // so add a "-__1" at the end of it and hope it doesn't clash!!
+      request.input(`${f}__1`, params.fields[f]);
+      fieldStr += `${f}=@${f}__1`;
 
       position++;
     }
