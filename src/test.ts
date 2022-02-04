@@ -15,46 +15,34 @@ async function run() {
   console.log(cols);
 
   let id = await mssql.create({
-    collection: "person",
-    fields: { first: "James" },
+    collection: "Inventory",
+    fields: { id: 3, name: "fruit", quantity: "55.5" },
     id: "id",
   });
   console.log(id);
 
-  let rows = await mssql.read({ collection: "person" });
-  console.log(rows);
-
-  rows = await mssql.read({ collection: "person", criteria: { id } });
-  console.log(rows);
-
-  rows = await mssql.read({
-    collection: "person",
-    criteria: { first: "James" },
+  let rows = await mssql.read({
+    collection: "Inventory",
+    criteria: {
+      quantity: "500",
+    },
   });
   console.log(rows);
+
+  console.log("next");
 
   await mssql.update({
-    collection: "person",
+    collection: "Inventory",
     fields: {
-      first: "Fred",
+      name: "veg",
+      quantity: "500",
     },
     criteria: {
-      id,
+      id: 3,
     },
   });
 
-  rows = await mssql.read({ collection: "person", criteria: { id } });
-  console.log(rows);
-
-  await mssql.delete({
-    collection: "person",
-
-    criteria: {
-      id,
-    },
-  });
-
-  rows = await mssql.read({ collection: "person" });
+  rows = await mssql.read({ collection: "Inventory", criteria: { id } });
   console.log(rows);
 }
 

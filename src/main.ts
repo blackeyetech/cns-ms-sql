@@ -53,6 +53,20 @@ export interface CNMSSqlDeleteParams {
   transaction?: mssql.Transaction;
 }
 
+export interface ColumnDetails {
+  index: number;
+  name: string;
+  length: number;
+  type: (() => mssql.ISqlType) | mssql.ISqlType;
+  udt?: any;
+  scale?: number | undefined;
+  precision?: number | undefined;
+  nullable: boolean;
+  caseSensitive: boolean;
+  identity: boolean;
+  readOnly: boolean;
+}
+
 // Class CNMSSql here
 export class CNMSSql extends CNShell {
   // Properties here
@@ -158,7 +172,73 @@ export class CNMSSql extends CNShell {
     }
   }
 
-  async getTableColumns(collection: string) {
+  convertValueToSqlType(
+    type: (() => mssql.ISqlType) | mssql.ISqlType,
+    value: any,
+  ): any {
+    switch (type) {
+      // Boolean
+      case mssql.Bit:
+        switch (typeof value) {
+          case "number":
+            return value === 0 ? 0 : 1;
+          case "boolean":
+            return value ? 1 : 0;
+          case "string":
+            switch (value.toUpperCase()) {
+              case "Y":
+              case "YES":
+              case "TRUE":
+              case "T":
+              case "1":
+                return true;
+              case "N":
+              case "NO":
+              case "FALSE":
+              case "F":
+              case "0":
+                return false;
+              default:
+                // Return actual value and let it throw an error
+                return value;
+            }
+
+          default:
+            // Return actual value and let it throw an error
+            return value;
+        }
+        break;
+      // Integer
+      case mssql.Int:
+      case mssql.BigInt:
+      case mssql.TinyInt:
+      case mssql.SmallInt:
+        return parseInt(value, 10);
+        break;
+      // Float
+      case mssql.Float:
+        return parseFloat(value);
+        break;
+      // Text
+      case mssql.VarChar:
+      case mssql.Char:
+      case mssql.Text:
+      case mssql.NVarChar:
+      case mssql.NChar:
+      case mssql.NText:
+        return value;
+        break;
+      // Dates
+      case mssql.Date:
+        return value;
+        break;
+      default:
+        // Return actual value and let it throw an error
+        return value;
+    }
+  }
+
+  async getTableColumns(collection: string): Promise<mssql.IColumnMetadata> {
     let request = new mssql.Request(this._pool);
     // This will return the colum details
     request.arrayRowMode = true;
@@ -167,10 +247,20 @@ export class CNMSSql extends CNShell {
 
     let res = await request.query(query);
 
-    return res.columns[0];
+    // This is an object of positional columns with each column being
+    // denoted by the position (ie. this is an array). Convert this
+    // to a proper object
+    let cols: mssql.IColumnMetadata = {};
+    for (let pos in res.columns[0]) {
+      cols[res.columns[0][pos].name] = res.columns[0][pos];
+    }
+
+    return cols;
   }
 
   async create(params: CNMSSqlCreateParams): Promise<any> {
+    let cols = await this.getTableColumns(params.collection);
+
     let fieldsStr = "";
     let valuesStr = "";
 
@@ -192,7 +282,11 @@ export class CNMSSql extends CNShell {
       fieldsStr += f;
       valuesStr += `@${f}`;
 
-      request.input(f, params.fields[f]);
+      request.input(
+        f,
+        cols[f].type,
+        this.convertValueToSqlType(cols[f].type, params.fields[f]),
+      );
       position++;
     }
 
@@ -296,6 +390,8 @@ export class CNMSSql extends CNShell {
   }
 
   async update(params: CNMSSqlUpdateParams) {
+    let cols = await this.getTableColumns(params.collection);
+
     let fieldStr = "";
     let position = 1;
     let request: mssql.Request;
@@ -333,11 +429,21 @@ export class CNMSSql extends CNShell {
         const val = params.criteria[c];
 
         if (typeof val === "object") {
-          request.input(c, val.val);
+          request.input(
+            c,
+            cols[c].type,
+            this.convertValueToSqlType(cols[c].type, val.val),
+          );
+
           query += `${c}${val.op}@${c}`;
           position++;
         } else {
-          request.input(c, val);
+          request.input(
+            c,
+            cols[c].type,
+            this.convertValueToSqlType(cols[c].type, val),
+          );
+
           query += `${c}=@${c}`;
           position++;
         }
