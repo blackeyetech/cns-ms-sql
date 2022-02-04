@@ -155,6 +155,18 @@ export class CNMSSql extends CNShell {
     }
   }
 
+  async getTableColumns(collection: string) {
+    let request = new mssql.Request(this._pool);
+    // This will return the colum details
+    request.arrayRowMode = true;
+    // We don't want any results so ensure nothinc comes back (1=0)
+    let query = `SELECT * FROM ${collection} WHERE 1 = 0;`;
+
+    let res = await request.query(query);
+
+    return res.columns[0];
+  }
+
   async create(params: CNMSSqlCreateParams): Promise<any> {
     let fieldsStr = "";
     let valuesStr = "";
@@ -189,10 +201,7 @@ export class CNMSSql extends CNShell {
       query = `INSERT INTO ${params.collection} (${fieldsStr}) VALUES (${valuesStr})`;
     }
 
-    let res = await request.query(query).catch(e => {
-      this.error("(%s) happened for query (%j)", e, query);
-      throw new Error("Something wrong with your request!");
-    });
+    let res = await request.query(query);
 
     if (params.id !== undefined) {
       return res.recordset[0][params.id];
@@ -269,11 +278,7 @@ export class CNMSSql extends CNShell {
       }
     }
 
-    let res = await request.query(query).catch(e => {
-      // TODO: Improve error handling
-      this.error("'%s' happened for query (%j)", e, query);
-      throw new Error("Something wrong with your request!");
-    });
+    let res = await request.query(query);
 
     if (params.opts.format === "array") {
       this.info("%j", res.columns[0]);
@@ -336,11 +341,7 @@ export class CNMSSql extends CNShell {
       }
     }
 
-    let res = await request.query(query).catch(e => {
-      // TODO: Improve error handling
-      this.error("%s' happened for query (%j)", e, query);
-      throw new Error("Something wrong with your request!");
-    });
+    let res = await request.query(query);
 
     return res.rowsAffected[0];
   }
@@ -379,11 +380,7 @@ export class CNMSSql extends CNShell {
       }
     }
 
-    let res = await request.query(query).catch(e => {
-      // TODO: Improve error handling
-      this.error("'%s' happened for query (%j)", e, query);
-      throw new Error("Something wrong with your request!");
-    });
+    let res = await request.query(query);
 
     return res.rowsAffected[0];
   }
@@ -397,11 +394,7 @@ export class CNMSSql extends CNShell {
       request = new mssql.Request(this._pool);
     }
 
-    let res = await request.query(query).catch(e => {
-      // TODO: Improve error handling
-      this.error("'%s' happened for query (%j)", e, query);
-      throw new Error("Something wrong with your request!");
-    });
+    let res = await request.query(query);
 
     return res.recordset;
   }
@@ -415,11 +408,7 @@ export class CNMSSql extends CNShell {
       request = new mssql.Request(this._pool);
     }
 
-    let res = await request.query(query).catch(e => {
-      // TODO: Improve error handling
-      this.error("'%s' happened for query (%j)", e, query);
-      throw new Error("Something wrong with your request!");
-    });
+    let res = await request.query(query);
 
     return res.rowsAffected[0];
   }
