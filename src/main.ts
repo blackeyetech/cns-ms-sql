@@ -13,6 +13,9 @@ const CFG_MSSQL_APP_NAME = "MSSQL_APP_NAME";
 const DEFAULT_HOST = "localhost";
 const DEFAULT_PORT = "1433";
 
+// Re-exports here
+export { MSSQLError } from "mssql";
+
 // Interfaces here
 export interface CNMSSqlReadOptions {
   orderBy?: string[];
