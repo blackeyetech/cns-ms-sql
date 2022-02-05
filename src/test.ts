@@ -16,7 +16,7 @@ async function run() {
 
   let id = await mssql.create({
     collection: "test3",
-    fields: { name: "", quantity: "5.123456789", d: "2021-01-01" },
+    fields: { name: "", quantity: "5.123456789", d: "" },
     id: "id",
   });
   console.log(id);

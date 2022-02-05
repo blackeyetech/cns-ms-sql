@@ -240,7 +240,11 @@ export class CNMSSql extends CNShell {
       // Dates
       case mssql.Date:
       case mssql.DateTime:
-        return value;
+        if (value.length) {
+          return value;
+        }
+
+        return null;
 
       default:
         // Return actual value and let it throw an error
