@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "name": "@cn-shell/ms-sql",
   "description": "A Cloud Native extension for MS SQL",
   "main": "dist/main.js",
