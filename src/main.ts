@@ -174,7 +174,7 @@ export class CNMSSql extends CNShell {
 
   convertValueToSqlType(
     type: (() => mssql.ISqlType) | mssql.ISqlType,
-    value: any,
+    value: string,
   ): any {
     switch (type) {
       // Boolean
@@ -207,18 +207,27 @@ export class CNMSSql extends CNShell {
             // Return actual value and let it throw an error
             return value;
         }
-        break;
+
       // Integer
       case mssql.Int:
       case mssql.BigInt:
       case mssql.TinyInt:
       case mssql.SmallInt:
-        return parseInt(value, 10);
-        break;
+        if (value.length) {
+          return parseInt(value, 10);
+        }
+
+        return null;
       // Float
       case mssql.Float:
-        return parseFloat(value);
-        break;
+      case mssql.SmallMoney:
+      case mssql.Money:
+        if (value.length) {
+          return parseFloat(value);
+        }
+
+        return null;
+
       // Text
       case mssql.VarChar:
       case mssql.Char:
@@ -227,11 +236,12 @@ export class CNMSSql extends CNShell {
       case mssql.NChar:
       case mssql.NText:
         return value;
-        break;
+
       // Dates
       case mssql.Date:
+      case mssql.DateTime:
         return value;
-        break;
+
       default:
         // Return actual value and let it throw an error
         return value;
