@@ -17,6 +17,19 @@ const DEFAULT_PORT = "1433";
 export { MSSQLError } from "mssql";
 
 // Interfaces here
+export interface CNMSSqlConvertValuesOptions {
+  nullCurrencyValue?: number;
+  dateFormat?: string;
+}
+
+export interface CNMSSqlCreateOptions {
+  convertValuesOpts?: CNMSSqlConvertValuesOptions;
+}
+
+export interface CNMSSqlUpdateOptions {
+  convertValuesOpts?: CNMSSqlConvertValuesOptions;
+}
+
 export interface CNMSSqlReadOptions {
   orderBy?: string[];
   orderByDesc?: string[];
@@ -29,6 +42,7 @@ export interface CNMSSqlCreateParams {
   collection: string;
   fields: { [key: string]: any };
   id?: string;
+  opts?: CNMSSqlCreateOptions;
   transaction?: mssql.Transaction;
 }
 
@@ -44,6 +58,7 @@ export interface CNMSSqlUpdateParams {
   collection: string;
   fields: { [key: string]: any };
   criteria: { [key: string]: any };
+  opts?: CNMSSqlUpdateOptions;
   transaction?: mssql.Transaction;
 }
 
@@ -175,6 +190,7 @@ export class CNMSSql extends CNShell {
   convertValueToSqlType(
     type: (() => mssql.ISqlType) | mssql.ISqlType,
     value: string,
+    opts?: CNMSSqlConvertValuesOptions,
   ): any {
     switch (type) {
       // Boolean
@@ -220,10 +236,19 @@ export class CNMSSql extends CNShell {
         return null;
       // Float
       case mssql.Float:
+        if (value.length) {
+          return parseFloat(value);
+        }
+
+        return null;
+
+      // Money
       case mssql.SmallMoney:
       case mssql.Money:
         if (value.length) {
           return parseFloat(value);
+        } else if (opts?.nullCurrencyValue !== undefined) {
+          return opts.nullCurrencyValue;
         }
 
         return null;
@@ -299,7 +324,11 @@ export class CNMSSql extends CNShell {
       request.input(
         f,
         cols[f].type,
-        this.convertValueToSqlType(cols[f].type, params.fields[f]),
+        this.convertValueToSqlType(
+          cols[f].type,
+          params.fields[f],
+          params?.opts?.convertValuesOpts,
+        ),
       );
       position++;
     }
@@ -446,7 +475,11 @@ export class CNMSSql extends CNShell {
           request.input(
             c,
             cols[c].type,
-            this.convertValueToSqlType(cols[c].type, val.val),
+            this.convertValueToSqlType(
+              cols[c].type,
+              val.val,
+              params?.opts?.convertValuesOpts,
+            ),
           );
 
           query += `${c}${val.op}@${c}`;
@@ -455,7 +488,11 @@ export class CNMSSql extends CNShell {
           request.input(
             c,
             cols[c].type,
-            this.convertValueToSqlType(cols[c].type, val),
+            this.convertValueToSqlType(
+              cols[c].type,
+              val,
+              params?.opts?.convertValuesOpts,
+            ),
           );
 
           query += `${c}=@${c}`;
