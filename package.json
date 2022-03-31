@@ -48,17 +48,17 @@
   "author": "Black Eye Technology",
   "license": "MIT",
   "devDependencies": {
-    "husky": "^3.1.0",
-    "lint-staged": "^9.5.0",
+    "husky": "^7.0.4",
+    "lint-staged": "^12.3.7",
+    "patch-package": "^6.4.7",
     "prettier": "^1.19.1",
-    "typescript": "^3.9.10",
-    "patch-package": "^6.4.7"
+    "typescript": "^3.9.10"
   },
   "dependencies": {
-    "@types/mssql": "^7.1.4",
-    "@types/node": "^12.20.42",
-    "cn-shell": "^2.25.2",
-    "mssql": "^7.3.0"
+    "@types/mssql": "^7.1.5",
+    "@types/node": "^12.20.47",
+    "cn-shell": "^2.26.2",
+    "mssql": "^7.3.1"
   },
   "repository": {
     "type": "git",
