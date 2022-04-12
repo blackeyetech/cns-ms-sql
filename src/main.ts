@@ -120,35 +120,47 @@ export class CNMSSql extends CNShell {
     resolve: (ready: boolean) => void,
     reject: (ready: boolean) => void,
   ): Promise<void> {
-    try {
-      this._pool = await new mssql.ConnectionPool({
-        user: this._user,
-        password: this._password,
-        database: this._database,
-        server: this._dbSever,
-        port: this._port,
-        arrayRowMode: false,
-        options: {
-          encrypt: false, // true for azure
-          trustServerCertificate: true, // true for self-signed certs
-          appName: this._appName,
-        },
-      }).connect();
-    } catch (e) {
-      this.error("DB returned the following error: (%j)", e);
-      setTimeout(() => {
-        this.isServerReady(resolve, reject);
-      }, 5000);
+    // Make sure we haven't already created the pool
+    if (this._pool === undefined) {
+      try {
+        this._pool = await new mssql.ConnectionPool({
+          user: this._user,
+          password: this._password,
+          database: this._database,
+          server: this._dbSever,
+          port: this._port,
+          arrayRowMode: false,
+          options: {
+            encrypt: false, // true for azure
+            trustServerCertificate: true, // true for self-signed certs
+            appName: this._appName,
+          },
+        }).connect();
+      } catch (e) {
+        this.error("DB returned the following error: (%j)", e);
+        setTimeout(() => {
+          this.isServerReady(resolve, reject);
+        }, 5000);
+      }
+
+      if (this._pool !== undefined) {
+        this._pool.on("error", err => {
+          console.log("sql errors", err);
+        });
+
+        this.info("Pool is open for business");
+      }
     }
 
     if (this._pool !== undefined) {
-      this._pool.on("error", err => {
-        console.log("sql errors", err);
-      });
+      // Make sure we can connect to the DB
+      let ok = await this.healthCheck();
 
-      this.info("MS-SQL DB ready");
-      this.info("Started!");
-      resolve(true);
+      if (ok) {
+        this.info("MS-SQL DB ready");
+        this.info("Started!");
+        resolve(true);
+      }
     }
   }
 
